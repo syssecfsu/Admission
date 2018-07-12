@@ -1,6 +1,6 @@
 ## Introduction
 
-This is a simple web application to support the admission process in the CS department at FSU. 
+This is a simple web application to support the admission process in the CS department at FSU. It is based on Rocket, the web framework for Rust. Rust is a (more) secure programming language.  
 
 ## Steps to deploy:
 - Install the nightly rust and checkout the source code, build the release version of the server
