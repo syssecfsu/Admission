@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="initial-scale=1.0, maximum-scale=2.0">
+	<title>Applications to FSU CS Graduate Programs</title>
+
+	<link rel="stylesheet" type="text/css" href="/resources/jquery.dataTables.min.css">
+	<link rel="stylesheet" href="/resources/bootstrap.min.css">
+	<link rel="stylesheet" type="text/css" href="resources/simple.css">
+
+	<script type="text/javascript" language="javascript" src="/resources/jquery.min.js"></script>
+	<script type="text/javascript" language="javascript" src="resources/jquery.dataTables.min.js"></script>
+	<script type="text/javascript" language="javascript" src="/resources/local.js"></script>
+	<script type="text/javascript" language="javascript" src="/resources/js.cookie.js"></script>
+	<script type="text/javascript" language="javascript" src="https://cdn.datatables.net/buttons/1.5.2/js/dataTables.buttons.min.js"></script>
+	<script type="text/javascript" language="javascript" src="https://cdn.datatables.net/buttons/1.5.2/js/buttons.colVis.min.js"></script>
+
+	<script type="text/javascript" language="javascript" class="init">
+		const fields = facts_app();
+
+		$(document).ready(function () {
+			// Setup - add a text input to each footer cell
+			$('#applicants tfoot th').each(function () {
+				if ($(this).text().length > 0) {
+					$(this).html('<input type="text" placeholder="  Search" size="8em"/>');
+				}
+			});
+
+			// DataTable
+			var table = $('#applicants').DataTable({
+				select: true,
+				"deferRender": false,
+
+				"aLengthMenu": [[15, 25, 50, 100, -1], [15, 25, 50, 100, "All"]],
+
+				"ajax": {
+					"url": "/application",
+					"dataSrc": ""
+				},
+
+				dom: 'lrBtip',
+				buttons: [
+					{
+						text: 'Show Uncommented',
+						action: function (e, dt, node, config) {
+							hide_commented();
+						}
+					},
+
+					{
+						text: 'Show Commented',
+						action: function (e, dt, node, config) {
+							only_commented();
+						}
+					},
+
+					{
+						text: 'Show All',
+						action: function (e, dt, node, config) {
+							unhide_commented();
+						}
+					}
+				],
+
+				// define the columns, which JSON field to obtain the data
+				"columns": [
+					{
+						"searchable": false,
+						"orderable": false,
+						"targets": 0,
+						"data": null,
+						"defaultContent": ''
+					},
+					{
+						"className": 'details-control',
+						"orderable": false,
+						"data": null,
+						"defaultContent": ''
+					},
+					{
+						"className": 'review-control',
+						"orderable": false,
+						"data": null,
+						"defaultContent": ''
+					},
+					{
+						"data": "emp_id",
+						"visible": false,
+						"searchable": false
+					},
+					{
+						"data": "applicant_id",
+						"visible": false,
+						"searchable": false
+					},
+					{ "data": "name" },
+					{
+						"data": "dob",
+						"visible": false,
+						"searchable": false
+					},
+					{
+						"data": "gender",
+						"visible": false,
+						"searchable": false
+					},
+					{ "data": "country" },
+					{
+						"data": "program",
+						"className": "text-center"
+					},
+					{
+						"data": "degree",
+						"className": "text-center"
+					},
+					{
+						"data": "term",
+						"className": "text-center"
+					},
+					{ "data": "interests" },
+					{ "data": "ug_university" },
+					{
+						"data": "ug_major",
+						"visible": false,
+						"searchable": false
+					},
+					{
+						"data": "ug_degree",
+						"visible": false,
+						"searchable": false
+					},
+					{
+						"data": "ug_gpa",
+						"className": "text-center",
+						"searchable": false
+					},
+					{ "data": "grad_university" },
+					{
+						"data": "grad_major",
+						"visible": false,
+						"searchable": false
+					},
+
+					{
+						"data": "grad_degree",
+						"visible": false,
+						"searchable": false
+					},
+					{
+						"data": "grad_gpa",
+						"className": "text-center",
+						"searchable": false
+					},
+					{
+						"data": "toefl_ielts",
+						"className": "text-center",
+						"searchable": false
+					},
+					{
+						"data": "gre",
+						"className": "text-center",
+						"searchable": false
+					},
+					{
+						"data": "decision",
+						"className": "text-center"
+					},
+					{
+						"data": "advisor",
+						"className": "text-center"
+					},
+					{
+						"data": "assistantship",
+						"className": "text-center"
+					},
+					{
+						"data": "fte",
+						"visible": false,
+						"searchable": false
+					},
+					{
+						"data": "yearly_amount",
+						"visible": false,
+						"searchable": false
+					},
+				],
+
+				"order": [[5, 'asc']],
+			});
+
+
+			// show only the rows that the user has not commented
+			function hide_commented() {
+				// show all first
+				$.fn.dataTable.ext.search.pop();
+
+				$.ajax({
+					type: "GET",
+					url: "/comment/user",
+					contentType: "application/json; charset=utf-8",
+					dataType: "json",
+					complete: function (data) {
+						var commented = data.responseJSON;
+						$.fn.dataTable.ext.search.push(
+							function (settings, data, dataIndex, rowData) {
+								var app_id = rowData["applicant_id"];
+								var idx = commented.indexOf(app_id);
+								return idx == -1;
+							}
+						);
+						table.draw();
+					}
+				});
+			}
+
+			// show only the rows that the user has not commented
+			function only_commented() {
+				// show all first
+				$.fn.dataTable.ext.search.pop();
+
+				$.ajax({
+					type: "GET",
+					url: "/comment/user",
+					contentType: "application/json; charset=utf-8",
+					dataType: "json",
+					complete: function (data) {
+						var commented = data.responseJSON;
+						$.fn.dataTable.ext.search.push(
+							function (settings, data, dataIndex, rowData) {
+								var app_id = rowData["applicant_id"];
+								var idx = commented.indexOf(app_id);
+								return idx != -1;
+							}
+						);
+						
+						table.draw();
+					}
+				});
+			}
+
+			function unhide_commented() {
+				$.fn.dataTable.ext.search.pop();
+				table.draw();
+			}
+
+			// show the column index
+			table.on('order.dt search.dt', function () {
+				table.column(0, { search: 'applied', order: 'applied' }).nodes().each(function (cell, i) {
+					cell.innerHTML = i + 1;
+				});
+			}).draw();
+
+			function gen_details(row_data, cur_files) {
+				var app_id = row_data.applicant_id;
+
+				// generate a label and input to edit fields
+				function gen_td(field) {
+					var f = fields[field];
+					var val = row_data[field];
+
+					if (f.can_change) {
+						if (f.hasOwnProperty("select")) {
+							// generate a select tag if the field has one
+							var p = '<td class="td_tag">' + f.tag + ':</td>' +
+								'<td> <select class="custom-select" id="input_' + field + '_' + app_id + '" value="' + val + '">';
+
+							var idx = f.select.indexOf(val);
+							if (idx == -1) {
+								p += '<option value="" selected>Choose...</option>';
+							} else {
+								p += '<option value="">Choose...</option>';
+							}
+
+							var i;
+							for (i in f.select) {
+								if (idx == i) {
+									p += '<option selected>' + f.select[i] + '</option>';
+								} else {
+									p += '<option>' + f.select[i] + '</option>';
+								}
+							}
+
+							p += '</select>';
+
+							return p;
+						} else {
+							return '<td class="td_tag">' + f.tag + ':</td>' +
+								'<td> <input type="text" id=input_' + field + '_' + app_id + ' value="' + val + '"></td>';
+						}
+					} else {
+						return '<td class="td_tag">' + f.tag + ':</td>' +
+							'<td>' + val + '</td>';
+					}
+				}
+
+				// generate links to open and delete the files
+				function gen_files() {
+					// generate links to open and delete files
+					function gen_file_op(name) {
+						return '<td class="td_tag">' + name.substring(0, name.lastIndexOf('.')) + '</td>' +
+							'<td> <a class="lnk_open" href="/file/' + app_id + '/' + name + '" target="_blank">Open</a> &nbsp;/&nbsp;' +
+							'<a class="lnk_delete" " href="/file/' + app_id + '/' + name + '" target="_blank">Delete</a>' +
+							'</td>';
+					}
+
+					var links = '';
+					var num = 1;
+
+					for (idx in cur_files) {
+						var fname = cur_files[idx].trim();
+						links += gen_file_op(fname);
+
+						if (num % 4 == 0) {
+							links += '</tr> <tr>';
+						}
+
+						num += 1;
+					}
+
+					return links;
+				}
+
+				// `row_data` is the original data object for the row
+				return '<table class="child" cellpadding="5" cellspacing="0" border="0" style="padding-left:50px;">' +
+					'<tr>' +
+					gen_td("emp_id") + gen_td("applicant_id") + gen_td("name") + gen_td("gender") +
+					'</tr>' + '<tr>' +
+					gen_td("country") + gen_td("program") + gen_td("degree") + gen_td("term") +
+					'</tr>' + '<tr>' +
+					gen_td("ug_university") + gen_td("ug_major") + gen_td("ug_degree") + gen_td("ug_gpa") +
+					'</tr>' + '<tr>' +
+					gen_td("grad_university") + gen_td("grad_major") + gen_td("grad_degree") + gen_td("grad_gpa") +
+					'</tr>' + '<tr>' +
+					gen_td("toefl_ielts") + gen_td("gre") + gen_td("advisor") + gen_td("interests") +
+					'</tr>' + '<tr>' +
+					gen_td("decision") + gen_td("assistantship") + gen_td("fte") + gen_td("yearly_amount") +
+					'</tr>' + '<tr>' +
+					'<td></td><td> <button type="button" class="btn btn-primary btn-sm" id="btn_update' + app_id + '">Save</button></td>' +
+					'<td></td><td> <input type="file" class="btn_upload" id="btn_upload_' + app_id + '" accept=".pdf" > </td>' +
+					'<td></td><td colspan="3"> <input type="file" class="btn_upload_all" id="btn_upload_all_' + app_id + '" accept=".pdf" > </td>' +
+					'</tr>' + '<tr>' +
+					gen_files() +
+					'</tr>' +
+					'</table>';
+			}
+
+			// style the file upload buttons. Had to do this after the buttons have been added to the DOM.
+			function style_files(row_data) {
+				function style_file(name, desc) {
+					var btn_class = "btn-outline-primary";
+					var btn_name = ".btn_" + name;
+					$(btn_name).filestyle({ input: false, siz: "sm", btnClass: btn_class, text: desc });
+				}
+
+				style_file("upload_all", "Upload All-in-one File");
+				style_file("upload", "Upload One File");
+			}
+
+			function details_callback(tr, listing) {
+				var row = table.row(tr);
+				var row_data = row.data();
+				var app_id = row_data.applicant_id;
+				var cur_files = listing.split(",").filter(str => str.trim().length > 0).sort();
+
+				function refresh() {
+					// The files have been changed. We need to refresh the child control
+					$.ajax({
+						type: "GET",
+						url: "/file/" + app_id,
+						dataType: "text",
+						complete: function (data) {
+							var listing = data.responseText;
+							details_callback(tr, listing);	// this will close the child
+							details_callback(tr, listing);	// show it again
+						}
+					});
+				}
+
+				// listen to the button change events (i.e., new files selected)
+				function listen_btns() {
+					function listen_btn(btn_id_prefix, file_name, id) {
+						var btn_id = btn_id_prefix + '_' + id;
+
+						$(btn_id).on('change', function () {
+							var files = $(btn_id).prop('files');
+
+							if (file_name.trim().length == 0) {
+								file_name = files[0].name;
+							}
+
+							toast("Load " + files[0].name + ", size: " + files[0].size + ' for ' + file_name);
+							upload("/file/" + id + "/" + file_name, files[0],
+								function (text) {
+									toast(text);
+									refresh();
+								});
+						});
+					}
+
+
+					listen_btn("#btn_upload", "", app_id);
+					listen_btn("#btn_upload_all", "all-in-one", app_id);
+				}
+
+				// remove the listener to avoid triggering multiple times
+				function off_btns(id) {
+					$("#btn_upload_" + id).off('change');
+					$("#btn_upload_all_" + id).off('change');
+				}
+
+				function on_delete(evt) {
+					evt.preventDefault();
+					var url = evt.target["href"];
+					delete_file(url, function (text) {
+						toast(text);
+						refresh();
+					});
+				}
+
+				function on_save() {
+					// retrieve data from the child form. Datatables uses strings, We need to 
+					// convert them to integer or float for some fields for json to be valid.
+					var json_obj = {};
+
+					$.each(fields, function (key, value) {
+						if (value.can_change) {
+							row_data[key] = $('#input_' + key + '_' + app_id).val().trim();
+						}
+
+						if (value.convert !== null) {
+							json_obj[key] = value.convert(row_data[key]);
+						} else {
+							json_obj[key] = row_data[key];
+						}
+					});
+
+					// We need to save the index column then restore it		
+					var first_td = $(row.node()).find("td:first");
+					var seq = first_td.text();
+
+					// Set the row data so we do not need to do the ajax
+					row.data(row_data);
+
+					// restore the index. This is needed because row does not automaticaly save it
+					first_td.text(seq);
+
+					// submit the changes
+					var json = JSON.stringify(json_obj);
+
+					$.ajax({
+						type: "POST",
+						url: "/application",
+						data: json,
+						contentType: "application/json; charset=utf-8",
+						dataType: "json",
+						complete: function (data) { toast(data.responseJSON["status"]); }
+					});
+				}
+
+				// Now start the code the handle details control
+				if (row.child.isShown()) {
+					// This row is already open - close it
+					row.child.hide();
+					tr.removeClass('shown'); // change class to display different icons for shown/hidden child
+
+					// remove the event listener, otherwise it will be fired multiple times
+					$('#applicants').off('click', "#btn_update" + app_id);
+					$('#applicants').off('click', "a.lnk_delete");
+					off_btns(app_id);
+
+				} else {
+					// close the currently open row. We have to do this otherwise the style of the button is wrong
+					table.rows().every(function (rowIdx, tableLoop, rowLoop) {
+						var open_row = table.row(rowIdx);
+						var other_app_id = open_row.data().applicant_id;
+
+						if (open_row.child.isShown()) {
+							open_row.child.hide();
+							$(open_row.node()).removeClass('shown');
+
+							// remove the event listener, otherwise it will be fired multiple times
+							$('#applicants').off('click', "#btn_update" + other_app_id);
+							$('#applicants').off('click', "a.lnk_delete");
+							off_btns(other_app_id);
+						}
+					});
+
+					// Open this row
+					row.child(gen_details(row_data, cur_files)).show();
+					tr.addClass('shown');
+
+					// We need to add the child then style it. A static button can only
+					// be styled if it exists statically. (Bootstrap4 filestyle)
+					style_files(row_data);
+
+					// Enable editing of the details
+					$('#applicants').on('click', "#btn_update" + app_id, on_save);
+					$('#applicants').on('click', "a.lnk_delete", on_delete);
+					listen_btns();
+				}
+			}
+
+
+			// Add event listener for opening and closing child attributes
+			$('#applicants tbody').on('click', 'td.details-control', function () {
+				var tr = $(this).closest('tr');
+				var row_data = table.row(tr).data();
+				var applicant_id = row_data.applicant_id;
+
+				// We need to read the list of the supporting files for the applicant, asynchronously. 
+				// Synchronous ajax has been deprecated in jQuery. 
+				$.ajax({
+					type: "GET",
+					url: "/file/" + applicant_id,
+					dataType: "text",
+					complete: function (data) {
+						var listing = data.responseText;
+						details_callback(tr, listing);
+					}
+				});
+			});
+
+			// open a review window
+			$('#applicants tbody').on('click', 'td.review-control', function () {
+				var tr = $(this).closest('tr');
+				var row = table.row(tr);
+				var row_data = row.data();
+				window.open('/review/' + row_data.applicant_id, '_blank');
+			});
+
+			// Apply the search
+			table.columns().every(function () {
+				var that = this;
+				$('input', this.footer()).on('keyup change', function () {
+					if (that.search() !== this.value) {
+						that.search(this.value).draw();
+					}
+				});
+			});
+
+			// logout 
+			$('#btn_logout').on('click', function () {
+				$.ajax({
+					type: "POST",
+					url: "/logout",
+					complete: function () {
+						location.reload();
+					}
+				});
+			});
+
+			// Manage accounts
+			$('#btn_account').on('click', function () {
+				window.open('/account', '_blank');
+			});
+
+			// Import the details for all the complete applications.
+			// If an applicant already exists, it will not be overwritten. 
+			$('#btn_import').on('change', function () {
+				var files = $('#btn_import').prop('files');
+
+				toast("Import from " + files[0].name + ", size: " + files[0].size);
+				upload("/file/import", files[0], function () { table.ajax.reload(); location.reload(); });
+			});
+
+			// Show the flash message. Flash message is used by Rocket for info cross pages. 
+			if (Cookies.get("_flash") !== undefined) {
+				//toast(Cookies.get("_flash"));
+				Cookies.remove("_flash");
+			}
+		});
+	</script>
+</head>
+
+<body>
+	<div class="container-fluid">
+		<div class="row">
+			<div class="col-9">
+				<h1>Applications to CS Graduate Programs
+					<span>Spring 2019
+					</span>
+				</h1>
+			</div>
+			<div class="col-3">
+				<div class="btn-group float-right btn-group-sm">
+					<button class="btn btn-outline-primary" id="btn_logout">Logout {{user_name}}/{{role}}</button>
+					<button type="button" class="btn btn-outline-warning" id="btn_account">Accounts</button>
+					<input type="file" class="filestyle" data-input="false" data-text="Import" data-btnClass="btn-outline-warning" data-size="sm"
+					 id="btn_import" accept=".csv">
+				</div>
+			</div>
+		</div>
+
+		<hr/>
+
+		<div class="row">
+			<div class="col-12">
+				<table id="applicants" class="display" cellspacing="0" width="100%">
+					<thead>
+						<tr>
+							<th></th>
+							<th></th>
+							<th></th>
+							<th>Employee ID</th>
+							<th>Applicant ID</th>
+							<th>Name</th>
+							<th>DOB</th>
+							<th>Gender</th>
+							<th>Country</th>
+							<th>Program</th>
+							<th>Degree</th>
+							<th>Term</th>
+							<th>Interests</th>
+							<th>UG_University</th>
+							<th>UG_Major</th>
+							<th>UG_Degree</th>
+							<th>GPA</th>
+							<th>Grad_University</th>
+							<th>Grad_Major</th>
+							<th>Grad_Degree</th>
+							<th>GPA</th>
+							<th>TOEFL</th>
+							<th>GRE</th>
+							<th>Decision</th>
+							<th>Advisor</th>
+							<th>Support</th>
+							<th>FTE</th>
+							<th>Salary</th>
+						</tr>
+					</thead>
+					<tfoot>
+						<tr>
+							<th></th>
+							<th></th>
+							<th></th>
+							<th>Employee ID</th>
+							<th>Applicant ID</th>
+							<th>Name</th>
+							<th>DOB</th>
+							<th>Gender</th>
+							<th>Country</th>
+							<th>Program</th>
+							<th>Degree</th>
+							<th>Term</th>
+							<th>Interests</th>
+							<th>UG_University</th>
+							<th>UG_Major</th>
+							<th>UG_Degree</th>
+							<th></th>
+							<th>Grad_University</th>
+							<th>Grad_Major</th>
+							<th>Grad_Degree</th>
+							<th></th>
+							<th></th>
+							<th></th>
+							<th>Decision</th>
+							<th>Advisor</th>
+							<th>Support</th>
+							<th>FTE</th>
+							<th>Salary</th>
+						</tr>
+					</tfoot>
+					<tbody>
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+
+	<div id="snackbar"> </div>
+
+	<script type="text/javascript" src="/resources/bootstrap-filestyle.min.js"> </script>
+</body>
+
+</html>

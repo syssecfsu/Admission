@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1.0, maximum-scale=2.0">
+    <title>Applications to FSU CS Graduate Programs</title>
+
+    <link rel="stylesheet" type="text/css" href="/resources/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="/resources//bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="/resources/simple.css">
+
+    <script type="text/javascript" language="javascript" src="/resources//jquery.min.js"></script>
+    <script type="text/javascript" language="javascript" src="/resources/jquery.dataTables.min.js"></script>
+    <script type="text/javascript" language="javascript" src="/resources/local.js"></script>
+
+    <script type="text/javascript" language="javascript" class="init">
+        $(document).ready(function () {
+            const fields = facts_app();
+
+            //{{applicant_id}} is a template variable, hbs
+            const app_id = {{ applicant_id }};
+
+            // DataTable for the comments
+            var table = $('#comments').DataTable({
+                "searching": false,
+                "scrollY": "28em",
+                "scrollCollapse": false,
+                "paging": false,
+                "info": false,
+                "ajax": {
+                    "url": "/comment/" + app_id,
+                    "dataSrc": ""
+                },
+
+                "columns": [
+                    {
+                        "data": "comment_id",
+                        "visible": false,
+                    },
+                    {
+                        "data": "applicant_id",
+                        "visible": false,
+                    },
+                    {
+                        "data": "commenter",
+                        "width": "25%",
+                        "className": "dt-body-right",
+                        "render": function (data, type, row, meta) {
+                            return '<div><b>' + data + ':</b></div> <div><small>' + row["when"] + '</small></div>';
+                        }
+                    },
+                    {
+                        "data": "opinion",
+                        "render": function (data, type, row, meta) {
+                            return '<p>' + data.replace(/\n/g, '<br>\n') + '</p>';
+                        }
+                    },
+                    {
+                        "data": "when",
+                        "visible": false
+                    }
+                ],
+                "order": [[0, 'desc']],
+            });
+
+            function adjust_pdf() {
+                $("#pdf_content").height($(window).height() * 0.95);
+            }
+
+            $(window).resize(function () {
+                adjust_pdf();
+            });
+
+            adjust_pdf();
+
+            // generate links to open support files
+            function gen_lnks(cur_files) {
+                // generate links to open a file
+                function gen_file_op(name) {
+                    // When we split the files, we add a number as suffix. Remove it for display. 
+                    var prefix = name.substring(0, name.lastIndexOf('.'));
+
+                    if ($.isNumeric(prefix.slice(-1))) {
+                        prefix = prefix.slice(0, prefix.length - 1);
+                    }
+
+                    return '<td class="td_tag">' + prefix + '</td>' +
+                        '<td class="td_info"> <a class="lnk_open" href="/file/' + app_id + '/' + name + '" target="_blank">Open</a> </td>';
+                }
+
+                // generate links to open and delete the files
+                function gen_files() {
+                    var links = '';
+                    var num = 1;
+
+                    for (idx in cur_files) {
+                        links += gen_file_op(cur_files[idx].trim());
+
+                        if (num % 2 == 0) {
+                            links += '</tr> <tr>';
+                        }
+
+                        num += 1;
+                    }
+
+                    return links;
+                }
+
+                // `row_data` is the original data object for the row
+                return '<table  class="tbl_info"> <tbody>' +
+                    '<tr> <td colspan="4"><b>Supporting Materials</b></td>' +
+                    '</tr> <tr>' +
+                    gen_files() +
+                    '</tr>' +
+                    '</tbody> </table>';
+            }
+
+            // Get the list of supporting files and create the links
+            $.ajax({
+                type: "GET",
+                url: "/file/" + app_id,
+                dataType: "text",
+                complete: function (data) {
+                    var listing = data.responseText;
+                    var cur_files = listing.split(",").filter(str => str.trim().length > 0).sort();
+                    var lnks = gen_lnks(cur_files);
+                    $("#div_support").html(lnks);
+
+                    // listen to the click of links to open it on the side
+                    $("a.lnk_open").click(function (evt) {
+                        evt.preventDefault();
+                        $("#pdf_content").attr('data', evt.target["href"]);
+                    });
+
+                    // show the first file
+                    if (cur_files.length > 0) {
+                        $("#pdf_content").attr('data', "/file/" + app_id + "/" + cur_files[0]);
+                    }
+                }
+            });
+
+
+            // Create a new comment
+            $("#btn_new").click(function () {
+                var json_obj = {};
+
+                json_obj.comment_id = 0;
+                json_obj.applicant_id = app_id;
+
+                json_obj.commenter = $("#input_commenter").val().trim();
+                json_obj.opinion = $("#input_opinion").val().trim();
+                json_obj.when = "now";
+
+                if (json_obj.opinion.length <= 0) {
+                    toast("Opinion cannot be empty!");
+                    return;
+                }
+
+                var json = JSON.stringify(json_obj);
+                $.ajax({
+                    type: "POST",
+                    url: "/comment/" + app_id,
+                    data: json,
+                    contentType: "application/json; charset=utf-8",
+                    dataType: "json",
+                    complete: function (data) {
+                        if (data.responseJSON["status"] == "Error") {
+                            toast(data.responseJSON["message"]);
+                        } else {
+                            toast(data.responseJSON["status"]);
+                        }
+
+                        // reload the comments table
+                        $("#input_opinion").val("");
+                        table.ajax.reload();
+                    }
+                });
+            });
+
+            // generate a multiple choice for decision
+            function gen_select(name, val, input_id, div_id) {
+                var f = fields[name];
+                var p = '<select class="custom-select" id="' + input_id + '" value="' + val + '">';
+
+                var idx = f.select.indexOf(val);
+
+                if (idx == -1) {
+                    p += '<option value="" selected>Choose...</option>';
+                } else {
+                    p += '<option value="">Choose...</option>';
+                }
+
+                var i;
+
+                for (i in f.select) {
+                    if (idx == i) {
+                        p += '<option selected>' + f.select[i] + '</option>';
+                    } else {
+                        p += '<option>' + f.select[i] + '</option>';
+                    }
+                }
+
+                p += '</select>';
+
+                $(div_id).html(p);
+            }
+
+            function update_app() {
+                // retrieve data from the child form. Datatables uses strings, We need to 
+                // convert them to integer or float for some fields for json to be valid.
+                var json_obj = {};
+                
+                json_obj["emp_id"] = {{emp_id}};
+                json_obj["applicant_id"] = {{applicant_id}};
+                json_obj["name"] = "{{name}}";
+                json_obj["dob"] = "{{dob}}";
+                json_obj["gender"] = "{{gender}}";
+                json_obj["country"] = "{{country}}";
+                json_obj["program"] = "{{program}}";
+                json_obj["degree"] = "{{degree}}";
+                json_obj["term"] = "{{term}}";
+                json_obj["ug_university"] = "{{ug_university}}";
+                json_obj["ug_major"] = "{{ug_major}}";
+                json_obj["ug_degree"] = "{{ug_degree}}";
+                json_obj["grad_university"] = "{{grad_university}}";
+                json_obj["grad_major"] = "{{grad_major}}";
+                json_obj["grad_degree"] = "{{grad_degree}}";
+
+                json_obj["interests"] = $('#input_interests').val().trim();
+                json_obj["ug_gpa"] = parseFloat($('#input_ug_gpa').val().trim());
+                json_obj["grad_gpa"] = parseFloat($('#input_grad_gpa').val().trim());
+                json_obj["toefl_ielts"] = $('#input_toefl').val().trim();
+                json_obj["gre"] = $('#input_gre').val().trim();
+                json_obj["decision"] = $('#input_decision').val().trim();
+                json_obj["advisor"] = $('#input_advisor').val().trim();
+                json_obj["assistantship"] = $('#input_assistantship').val().trim();
+                json_obj["fte"] = parseFloat($('#input_fte').val().trim());
+                json_obj["yearly_amount"] = parseInt($('#input_yearly').val().trim());
+
+                // submit the changes
+                var json = JSON.stringify(json_obj);
+
+                $.ajax({
+                    type: "POST",
+                    url: "/application",
+                    data: json,
+                    contentType: "application/json; charset=utf-8",
+                    dataType: "json",
+                    complete: function (data) { toast(data.responseJSON["status"]); }
+                });
+            }
+
+            gen_select("decision", "{{decision}}", "input_decision", "#div_decision");
+            gen_select("assistantship", "{{assistantship}}", "input_assistantship", "#div_assistantship");
+
+            $('#input_interests').change(update_app);
+            $('#input_ug_gpa').change(update_app);
+            $('#input_grad_gpa').change(update_app);
+            $('#input_toefl').change(update_app);
+            $('#input_gre').change(update_app);
+            $('#input_decision').change(update_app);
+            $('#input_advisor').change(update_app);
+            $('#input_assistantship').change(update_app);
+            $('#input_fte').change(update_app);
+            $('#input_yearly').change(update_app);
+        });
+    </script>
+</head>
+
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-3" style="border-right: 1px solid lightgray;">
+                <h3>Application {{applicant_id}}:</h3>
+                <hr/>
+                <div class="info">
+                    <table class="tbl_info">
+                        <tbody>
+                            <tr>
+                                <td colspan="4">
+                                    <b>Basic Information:</b>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="td_tag">Employee ID:</td>
+                                <td class="td_info">{{emp_id}}</td>
+                                <td class="td_tag">Applicant ID:</td>
+                                <td class="td_info">{{applicant_id}}</td>
+                            </tr>
+                            <tr>
+                                <td class="td_tag">Name:</td>
+                                <td class="td_info">{{name}}</td>
+                                <td class="td_tag">Gender:</td>
+                                <td class="td_info">{{gender}}</td>
+                            </tr>
+                            <tr>
+                                <td class="td_tag">Country:</td>
+                                <td class="td_info" colspan="3">{{country}}</td>
+                            </tr>
+                            <tr>
+                                <td class="td_tag">Program:</td>
+                                <td class="td_info">{{program}}/{{term}}</td>
+                                <td class="td_tag">Degree:</td>
+                                <td class="td_info">
+                                    <b>{{degree}}</b>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="td_tag">Interests:</td>
+                                <td class="td_info" colspan="3">
+                                    <input type="text" id="input_interests" value="{{interests}}" style="width:100%">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="td_tag">UG University:</td>
+                                <td class="td_info" colspan="3">
+                                    <b>{{ug_university}}</b>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="td_tag">UG Major:</td>
+                                <td class="td_info" colspan="3">{{ug_major}}</td>
+                            </tr>
+                            <tr>
+                                <td class="td_tag">UG Degree:</td>
+                                <td class="td_info">{{ug_degree}}</td>
+                                <td class="td_tag">UG GPA:</td>
+                                <td class="td_info">
+                                    <input type="number" id="input_ug_gpa" value="{{ug_gpa}}" min=0 max=4 step=0.01 style="width:100%">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="td_tag">Grad University:</td>
+                                <td class="td_info" colspan="3">
+                                    <b>{{grad_university}}</b>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="td_tag">Grad Major:</td>
+                                <td class="td_info" colspan="3">{{grad_major}}</td>
+                            </tr>
+                            <tr>
+                                <td class="td_tag">Grad Degree:</td>
+                                <td class="td_info">{{grad_degree}}</td>
+                                <td class="td_tag">Grad GPA:</td>
+                                <td class="td_info">
+                                    <input type="number" id="input_grad_gpa" value="{{grad_gpa}}" min=0 max=4 step=0.01 style="width:100%">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="td_tag">TOEFL
+                                    <br>(Total/L/R/W/S):</td>
+                                <td class="td_info">
+                                    <input type="text" id="input_toefl" value="{{toefl_ielts}}" style="width:100%">
+                                </td>
+                                <td class="td_tag">GRE(V/Q/A):</td>
+                                <td class="td_info">
+                                    <input type="text" id="input_gre" value="{{gre}}" style="width:100%">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="td_tag">Decision:</td>
+                                <td class="td_info" colspan="2">
+                                    <div id="div_decision"></div>
+                                </td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td class="td_tag">Advisor:</td>
+                                <td class="td_info">
+                                    <input type="text" id="input_advisor" value="{{advisor}}" style="width:100%">
+                                </td>
+                                <td class="td_tag">Assistantship:</td>
+                                <td class="td_info">
+                                    <div id="div_assistantship"></div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="td_tag">FTE:</td>
+                                <td class="td_info">
+                                    <input type="number" id="input_fte" value="{{fte}}" min=0 max=1 step=0.1 style="width:100%">
+                                </td>
+                                <td class="td_tag">Salary:</td>
+                                <td class="td_info">
+                                    <input type="number" id="input_yearly" value="{{yearly_amount}}" min=0 step=1 style="width:100%">
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div id="div_support"> </div>
+                </div>
+            </div>
+            <div class="col-3" style="border-right: 1px solid lightgray;">
+                <div id="snackbar">Error message here..</div>
+                <div>
+                    <h3>Comments:</h3>
+                    <hr/>
+                    <table id="comments" class="display" cellspacing="0" width="100%">
+                        <thead>
+                            <tr>
+                                <th>Comment ID</th>
+                                <th>Applicant ID</th>
+                                <th>Commenter</th>
+                                <th>Opinion</th>
+                                <th>When</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>100</td>
+                                <td>200</td>
+                                <td>Zhi Wang</td>
+                                <td>
+                                    Florida State University preserves, expands, and disseminates knowledge in the sciences, technology, arts, humanities, and
+                                    professions, while embracing a philosophy of learning strongly rooted in the traditions
+                                    of the liberal arts.
+                                </td>
+                                <td>today</td>
+                            </tr>
+
+                        </tbody>
+                    </table>
+                </div>
+
+                <p style="white-space: pre" />
+                <div>
+                    <h3>New Comment:</h3>
+                    <hr/>
+                    <div>
+                        <form>
+                            <div class="form-group">
+                                <label for="input_commenter">Commenter:</label>
+                                <input type="text" class="form-control" id="input_commenter" placeholder="Your user name will be used if blank.">
+                            </div>
+                            <div class="form-group">
+                                <label for="input_comments">Opinion:</label>
+                                <textarea class="form-control" id="input_opinion" rows="8" placeholder="Always assume your comments will become public!"></textarea>
+                            </div>
+
+                            <div>
+                                <button type="button" class="btn btn-primary" id="btn_new">Submit</button>'
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div id="pdf">
+                    <object width="100%" height="95vh" type="application/pdf" data="" id="pdf_content">
+                        <p>The file is missing!</p>
+                    </object>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
