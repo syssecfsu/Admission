@@ -18,4 +18,10 @@ To use the site, you need to export the data from the Slate by creating a query 
 `Name, Birthdate, Academic Department, Plan, Admit Term, Application, External_Id, Age, Primary Citizenship, Sex, Email, School 1 Institution, School 1 Major, School 1 Degree, School 2 Institution, School 2 Major, School 2 Degree, TOEFL Total, TOEFL Listening (0-30), TOEFL Reading (0-30), TOEFL Structure/Written Expression, TOEFL Speaking (0-30), GRE Verbal (130-170), GRE Quantitative (130-170), 
 GRE Analytical Writing (0-6)` for the complete applications to your department. Run the query and export the data as a csv. This list of applications can be imported to the internal admission web site. For each individual application, you then need to download the all-in-one PDF file that contains all the supporting materials and upload it. The server will automatically break the file into smaller files. 
 
+Here are the two screenshots. This is the main window of the Web application:
 
+![main window](https://raw.githubusercontent.com/syssecfsu/Admission/master/screenshots/main.png)
+
+This is the window for individual application review:
+
+![review window](https://raw.githubusercontent.com/syssecfsu/Admission/master/screenshots/review.png)
