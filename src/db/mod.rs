@@ -351,6 +351,13 @@ pub fn import_csv(db_conn: &SqliteConnection, path: &str) -> io::Result<String> 
     for r in rdr.records() {
         let record = r?;
 
+        let dep = read_field(&record, f2idx.get("Academic Department"));
+
+        if dep != "ASCOP" {
+            warn!("skip application to {}", dep);
+            continue;
+        }
+
         let mut new_app = Application {
             emp_id: read_field(&record, f2idx.get("External_Id"))
                 .parse::<i32>()
