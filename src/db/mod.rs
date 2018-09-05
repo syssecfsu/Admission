@@ -7,6 +7,7 @@ use r2d2_diesel::ConnectionManager;
 
 use diesel::prelude::*;
 use diesel::sqlite::SqliteConnection;
+use diesel::result::Error::DatabaseError;
 
 use ammonia::clean;
 use rand::distributions::Alphanumeric;
@@ -14,8 +15,10 @@ use rand::Rng;
 use rocket::http::Status;
 use rocket::request::{self, FromRequest};
 use rocket::{Outcome, Request, State};
+
 use std::iter;
 use std::{env, io};
+
 
 pub mod models;
 pub mod schema;
@@ -101,6 +104,14 @@ impl Application {
 
         diesel::update(applications_tbl::table.find(app.applicant_id))
             .set(&app)
+            .execute(conn)
+            .is_ok()
+    }
+
+    pub fn update_gretoefl (conn: &SqliteConnection, id: i32, gre: String, toefl: String) -> bool {
+
+        diesel::update(applications_tbl::table.filter(applications_tbl::applicant_id.eq(id)))
+            .set((applications_tbl::gre.eq(gre), applications_tbl::toefl_ielts.eq(toefl)))
             .execute(conn)
             .is_ok()
     }
@@ -400,6 +411,7 @@ pub fn import_csv(db_conn: &SqliteConnection, path: &str) -> io::Result<String> 
             yearly_amount: 0,
         };
 
+
         // parse the degree applied to
         let mut degree;
         let mut program;
@@ -455,13 +467,25 @@ pub fn import_csv(db_conn: &SqliteConnection, path: &str) -> io::Result<String> 
         }
 
         //println!("{:?}", new_app);
+        let id = new_app.applicant_id;
+        let gre = new_app.gre.clone();
+        let toefl = new_app.toefl_ielts.clone();
 
         let result = diesel::insert_into(applications_tbl::table)
             .values(&new_app)
             .execute(db_conn);
 
         if result.is_err() {
-            warn!("import_csv: {}", result.unwrap_err());
+            let err = result.unwrap_err();
+            warn!("import_csv: {}", err);
+
+            if let DatabaseError(err_type, _) = err {
+                if let diesel::result::DatabaseErrorKind::UniqueViolation = err_type {
+                    warn!("DatabaseError: application already exists, update TOEFL/GRE");
+                    Application::update_gretoefl(db_conn, id, gre, toefl);
+                }
+            }
+
         }
     }
 
