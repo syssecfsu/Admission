@@ -1,12 +1,13 @@
-#![feature(plugin, decl_macro, custom_derive)]
+/* #![feature(plugin, decl_macro)]
 #![plugin(rocket_codegen)]
 #![feature(extern_prelude)]
-#![recursion_limit = "128"]
+#![recursion_limit = "128"] */
+#![feature(proc_macro_hygiene, decl_macro)]
+#[macro_use] extern crate rocket;
 
 extern crate chrono;
 extern crate csv;
 extern crate handlebars;
-extern crate rocket;
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]

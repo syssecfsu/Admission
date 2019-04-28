@@ -1,29 +1,29 @@
 [package]
 name = "admission"
-version = "0.1.0"
+version = "0.2.0"
 
 [dependencies]
-rocket = {version = "0.3", features=["tls"]} 
-rocket_codegen = "0.3"
+rocket = {version = "0.4", features=["tls"]} 
+rocket_codegen = "0.4"
 serde = "1.0"
 serde_json = "1.0"
 serde_derive = "1.0"
-diesel = { version = "~1.2", features = ["sqlite", "32-column-tables"] }
+diesel = { version = "1.4", features = ["sqlite", "32-column-tables"] }
 r2d2 = "*"
 r2d2-diesel = "*"
 csv = "1"
-handlebars = "0.28"
+handlebars = "1.0"
 chrono = "0.4"
 argon2rs = "0.2"
 lazy_static = "1.0"
-ammonia = "1.1.0"
-rand = "0.5"
-lopdf = "0.15"
+ammonia = "2.0"
+rand = "0.6"
+lopdf = "0.21"
 log = "0.4"
 log4rs = "0.8"
 
 [dependencies.rocket_contrib]
-version = "0.3"
+version = "0.4"
 default-features = false
 features = ["json", "handlebars_templates"]
 
