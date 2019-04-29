@@ -296,8 +296,6 @@ fn get_index(header: &csv::StringRecord, title: &str) -> Option<usize> {
 }
 
 pub fn import_csv(db_conn: &SqliteConnection, path: &str) -> io::Result<String> {
-    use self::schema::applications_tbl;
-
     // Build the CSV reader and iterate over each record.
     let file = File::open(path)?;
     let mut rdr = csv::Reader::from_reader(file);
@@ -413,8 +411,8 @@ pub fn import_csv(db_conn: &SqliteConnection, path: &str) -> io::Result<String> 
 
 
         // parse the degree applied to
-        let mut degree;
-        let mut program;
+        let degree;
+        let program;
 
         {
             let ndegree = &new_app.program;

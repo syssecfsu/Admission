@@ -1,19 +1,21 @@
-/* #![feature(plugin, decl_macro)]
-#![plugin(rocket_codegen)]
-#![feature(extern_prelude)]
-#![recursion_limit = "128"] */
+#![recursion_limit = "128"] 
+
 #![feature(proc_macro_hygiene, decl_macro)]
 #[macro_use] extern crate rocket;
 
 extern crate chrono;
 extern crate csv;
 extern crate handlebars;
+
 #[macro_use]
 extern crate lazy_static;
+
 #[macro_use]
 extern crate diesel;
+
 #[macro_use]
 extern crate serde_derive;
+
 #[macro_use]
 extern crate rocket_contrib;
 extern crate ammonia;
@@ -33,12 +35,14 @@ use log4rs::config::{Appender, Config, Root};
 use log4rs::encode::pattern::PatternEncoder;
 
 use chrono::Local;
-use rocket::http::{Cookie, Cookies, Status};
+use rocket::http::{Cookie, Cookies};
 use rocket::outcome::IntoOutcome;
 use rocket::request::{self, FlashMessage, Form, FromRequest, Request};
-use rocket::response::{Failure, Flash, NamedFile, Redirect};
+use rocket::response::{status, Flash, NamedFile, Redirect};
 use rocket::Data;
-use rocket_contrib::{Json, Template, Value};
+use rocket_contrib::json::Json;
+use rocket_contrib::json::JsonValue;
+use rocket_contrib::templates::Template;
 
 use std::collections::HashMap;
 use std::io::{Error, ErrorKind};
@@ -119,13 +123,13 @@ struct Login {
 
 #[post("/login", data = "<lg>")]
 fn login(mut cookies: Cookies, lg: Form<Login>, connection: db::Connection) -> Flash<Redirect> {
-    let name = (&lg.get().user_name).to_string();
+    let name = &lg.user_name.to_string();
     let user_opt = User::get(&connection, &name);
 
     if let Some(user) = user_opt {
-        if user.password == User::hash_passwd(&user.salt, &lg.get().password) {
+        if user.password == User::hash_passwd(&user.salt, &lg.password) {
             warn!("{} just logged in", name);
-            cookies.add_private(Cookie::new("user_name", name));
+            cookies.add_private(Cookie::new("user_name", lg.into_inner().user_name));
             return Flash::success(Redirect::to("/"), "Successfully logged in.");
         }
     }
@@ -181,18 +185,18 @@ fn images_auth(file: PathBuf, _user: UserAuth) -> Option<NamedFile> {
 // Routers to handle urls based on /application
 //
 #[get("/")]
-fn read_apps_auth(connection: db::Connection, _user: UserAuth) -> Json<Value> {
+fn read_apps_auth(connection: db::Connection, _user: UserAuth) -> JsonValue {
     let apps = Application::read(&connection);
-    Json(json!(apps))
+    json!(apps)
 }
 
 #[get("/<id>")]
-fn read_app_auth(id: i32, connection: db::Connection, _user: UserAuth) -> Json<Value> {
+fn read_app_auth(id: i32, connection: db::Connection, _user: UserAuth) -> JsonValue {
     let one = Application::get(&connection, id);
     if let Some(app) = one {
-        Json(json!(app))
+        json!(app)
     } else {
-        Json(json!({"status": "Error", "message": "not found"}))
+        json!({"status": "Error", "message": "not found"})
     }
 }
 
@@ -201,15 +205,15 @@ fn update_app_auth(
     app: Json<Application>,
     connection: db::Connection,
     user: UserAuth,
-) -> Json<Value> {
+) -> JsonValue {
     warn!("{} updated application to -> {:?}", user.user_name, &app);
 
     let new_app = Application { ..app.into_inner() };
 
     if Application::update(&connection, new_app) {
-        Json(json!({"status": "Success"}))
+        json!({"status": "Success"})
     } else {
-        Json(json!({"status": "Error", "message" : "failed to update not found"}))
+        json!({"status": "Error", "message" : "failed to update not found"})
     }
 }
 
@@ -380,13 +384,13 @@ fn import(_paste: Data) -> Redirect {
 // Routers to handle urls based on /comment
 //
 #[get("/<id>")]
-fn read_comments_auth(id: i32, connection: db::Connection, _user: UserAuth) -> Json<Value> {
-    Json(json!(Comment::read(&connection, id)))
+fn read_comments_auth(id: i32, connection: db::Connection, _user: UserAuth) -> JsonValue {
+    json!(Comment::read(&connection, id))
 }
 
 #[get("/user")]
-fn get_commented_user_auth(connection: db::Connection, user: UserAuth) -> Json<Value> {
-    Json(json!(Comment::get_commented(&connection, &user.user_name)))
+fn get_commented_user_auth(connection: db::Connection, user: UserAuth) -> JsonValue {
+    json!(Comment::get_commented(&connection, &user.user_name))
 }
 
 #[post("/<_id>", data = "<cmt>")]
@@ -395,7 +399,7 @@ fn add_comment_auth(
     _id: i32,
     cmt: Json<Comment>,
     user: UserAuth,
-) -> Json<Value> {
+) -> JsonValue {
     let date = Local::now();
     let now = date.format("%m/%d/%Y %H:%M:").to_string();
     
@@ -416,9 +420,9 @@ fn add_comment_auth(
     }
 
     if Comment::insert(&connection, c) {
-        Json(json!({"status": "Success"}))
+        json!({"status": "Success"})
     } else {
-        Json(json!({"status": "Error", "message" : "Failed to insert the comment"}))
+        json!({"status": "Error", "message" : "Failed to insert the comment"})
     }
 }
 
@@ -441,10 +445,10 @@ fn add_comment(_connection: db::Connection, _id: i32, _cmt: Json<Comment>) -> Re
 // Routers to handle urls based on /users
 //
 #[get("/")]
-fn manage_user_auth(_connection: db::Connection, user: UserAuth) -> Result<Template, Failure> {
+fn manage_user_auth(_connection: db::Connection, user: UserAuth) -> Result<Template, status::BadRequest<&'static str>> {
     if !user.is_sys() {
         warn!("{} tried to access user management page", user.user_name);
-        Err(Failure(Status::Forbidden))
+        Err(status::BadRequest(Some("Authentication error!")))
     } else {
         Ok(Template::render("user", &user))
     }
@@ -456,11 +460,11 @@ fn manage_user(_connection: db::Connection) -> Redirect {
 }
 
 #[get("/")]
-fn read_users_auth(connection: db::Connection, user: UserAuth) -> Json<Value> {
+fn read_users_auth(connection: db::Connection, user: UserAuth) -> JsonValue {
     if !user.is_sys() {
-        return Json(
-            json!({"status": "Error", "message" : "only sys admin can change user settings"}),
-        );
+        return 
+            json!({"status": "Error", "message" : "only sys admin can change user settings"})
+        ;
     }
 
     let mut users = User::read(&connection);
@@ -469,7 +473,7 @@ fn read_users_auth(connection: db::Connection, user: UserAuth) -> Json<Value> {
         u.password = "Password hash hidden".to_string();
     }
 
-    Json(json!(users))
+    json!(users)
 }
 
 #[get("/", rank = 2)]
@@ -478,7 +482,7 @@ fn read_users(_connection: db::Connection) -> Redirect {
 }
 
 #[post("/", data = "<new_user>")]
-fn add_user_auth(new_user: Json<User>, connection: db::Connection, user: UserAuth) -> Json<Value> {
+fn add_user_auth(new_user: Json<User>, connection: db::Connection, user: UserAuth) -> JsonValue {
     let new_user = User {
         ..new_user.into_inner()
     };
@@ -489,9 +493,9 @@ fn add_user_auth(new_user: Json<User>, connection: db::Connection, user: UserAut
     );
 
     if user.is_sys() && User::insert(&connection, new_user) {
-        Json(json!({"status": "Success"}))
+        json!({"status": "Success"})
     } else {
-        Json(json!({"status": "Error", "message" : "failed to add user"}))
+        json!({"status": "Error", "message" : "failed to add user"})
     }
 }
 
@@ -501,13 +505,13 @@ fn add_user(_new_user: Json<User>, _connection: db::Connection) -> Redirect {
 }
 
 #[delete("/<user_name>")]
-fn del_user_auth(user_name: String, connection: db::Connection, user: UserAuth) -> Json<Value> {
+fn del_user_auth(user_name: String, connection: db::Connection, user: UserAuth) -> JsonValue {
     if user.is_sys() && User::delete(&connection, &user_name) {
         warn!("{} deleted user {}", user.user_name, user_name);
-        Json(json!({"status": "Success"}))
+        json!({"status": "Success"})
     } else {
         warn!("{} failed to delete user {}", user.user_name, user_name);
-        Json(json!({"status": "Error", "message" : "failed to delete user"}))
+        json!({"status": "Error", "message" : "failed to delete user"})
     }
 }
 

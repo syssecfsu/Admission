@@ -110,27 +110,27 @@ pub fn split_pdf(fname: &PathBuf) -> Option<String> {
     info!("Total # of pages: {}", max_pg);
 
     // get the table of content
-    let toc_id = doc.catalog()?.get("Outlines")?.as_reference()?;
+    let toc_id = doc.catalog()?.get(b"Outlines")?.as_reference()?;
     let toc = doc.get_object(toc_id)?.as_dict()?;
 
     // the first level outline, we use 2nd level of outline
     let level1 = doc
-        .get_object(toc.get("First")?.as_reference()?)?
+        .get_object(toc.get(b"First")?.as_reference()?)?
         .as_dict()?;
 
     //println!("{}", level1.get("Title")?.as_string()?);
 
     // the first 2nd-level outline
     let first = doc
-        .get_object(level1.get("First")?.as_reference()?)?
+        .get_object(level1.get(b"First")?.as_reference()?)?
         .as_dict()?;
 
     let mut l2 = first;
 
     // find all the level 2 outlines
     loop {
-        let title = l2.get("Title")?.as_string()?;
-        let dest = l2.get("Dest")?.as_array()?;
+        let title = l2.get(b"Title")?.as_string()?;
+        let dest = l2.get(b"Dest")?.as_array()?;
         let pg = *id2pg.get(&dest[0].as_reference()?)?;
 
         let sec = Section {
@@ -142,7 +142,7 @@ pub fn split_pdf(fname: &PathBuf) -> Option<String> {
         info!("Section in pdf: {:?}", sec);
         sections.push(sec);
 
-        let next = l2.get("Next");
+        let next = l2.get(b"Next");
         if next.is_none() {
             break;
         }

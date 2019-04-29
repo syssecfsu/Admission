@@ -19,7 +19,7 @@ fn main() -> io::Result<()> {
 
     let mut passwd = String::new();
     io::stdin().read_line(&mut passwd)?;
-    let passwd = passwd.trim_right();
+    let passwd = passwd.trim_end();
 
     let mut rng = rand::thread_rng();
 
