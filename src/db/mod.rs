@@ -483,7 +483,6 @@ pub fn import_csv(db_conn: &SqliteConnection, path: &str) -> io::Result<String> 
                     Application::update_gretoefl(db_conn, id, gre, toefl);
                 }
             }
-
         }
     }
 
