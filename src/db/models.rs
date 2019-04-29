@@ -28,8 +28,7 @@ pub struct Application {
     pub decision: String,
     pub advisor: String,
     pub assistantship: String,
-    pub fte: f64,
-    pub yearly_amount: i32,
+    pub interact: String,
 }
 
 #[derive(Queryable, AsChangeset, Insertable, Debug, Serialize, Deserialize)]

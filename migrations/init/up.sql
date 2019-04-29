@@ -22,8 +22,7 @@ CREATE TABLE `applications_tbl` (
 	`decision`	TEXT NOT NULL,
 	`advisor`	TEXT NOT NULL,
 	`assistantship`	TEXT NOT NULL,
-	`fte`	REAL NOT NULL,
-	`yearly_amount`	INTEGER NOT NULL,
+	`interact`	TEXT NOT NULL,
 	PRIMARY KEY(`applicant_id`)
 );
 

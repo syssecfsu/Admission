@@ -23,8 +23,7 @@ table! {
         decision -> Text,
         advisor -> Text,
         assistantship -> Text,
-        fte -> Double,
-        yearly_amount -> Integer,
+        interact -> Text,
     }
 }
 

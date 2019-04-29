@@ -46,6 +46,16 @@ function facts_app() {
             "Decn: Admit/HP",
             "Decn: Admit/support",
             "Decn: Reject",
+        ]
+    };
+    fields["interact"] = {
+        tag: "Interact",
+        can_change: true,
+        convert: null,
+        long: true,
+        select: [
+            "None",
+            "Ntfy: Incomplete",
             "Ntfy: Admit",
             "Ntfy: Admit/HP",
             "Ntfy: Admit/support",
@@ -64,8 +74,6 @@ function facts_app() {
         long: false,
         select: ["None", "TA", "DRTA", "RA", "TA+RA", "SFS"]
     };
-    fields["fte"] = { tag: "FTE", can_change: true, convert: parseFloat, long: false };
-    fields["yearly_amount"] = { tag: "Salary", can_change: true, convert: parseInt, long: false };
 
     return fields;
 }

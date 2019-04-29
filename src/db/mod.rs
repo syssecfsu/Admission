@@ -136,6 +136,7 @@ impl Application {
         self.decision = clean(&self.decision);
         self.advisor = clean(&self.advisor);
         self.assistantship = clean(&self.assistantship);
+        self.interact = clean(&self.interact);
     }
 }
 
@@ -405,8 +406,7 @@ pub fn import_csv(db_conn: &SqliteConnection, path: &str) -> io::Result<String> 
             decision: "New".to_string(),
             advisor: "".to_string(),
             assistantship: "None".to_string(),
-            fte: 0.0f64,
-            yearly_amount: 0,
+            interact: "None".to_string(),
         };
 
 

@@ -109,6 +109,8 @@
 					{ "data": "country" },
 					{
 						"data": "program",
+						"visible": false,
+						"searchable": false,
 						"className": "text-center"
 					},
 					{
@@ -117,14 +119,15 @@
 					},
 					{
 						"data": "term",
+						"visible": false,
+						"searchable": false,
 						"className": "text-center"
 					},
 					{ "data": "interests" },
 					{ "data": "ug_university" },
 					{
 						"data": "ug_major",
-						"visible": false,
-						"searchable": false
+						"searchable": true
 					},
 					{
 						"data": "ug_degree",
@@ -156,10 +159,12 @@
 					{
 						"data": "toefl_ielts",
 						"className": "text-center",
+						"visible": false,
 						"searchable": false
 					},
 					{
 						"data": "gre",
+						"visible": false,
 						"className": "text-center",
 						"searchable": false
 					},
@@ -168,22 +173,16 @@
 						"className": "text-center"
 					},
 					{
-						"data": "advisor",
-						"className": "text-center"
-					},
-					{
 						"data": "assistantship",
 						"className": "text-center"
 					},
 					{
-						"data": "fte",
-						"visible": false,
-						"searchable": false
+						"data": "advisor",
+						"className": "text-center"
 					},
 					{
-						"data": "yearly_amount",
-						"visible": false,
-						"searchable": false
+						"data": "interact",
+						"className": "text-center"
 					},
 				],
 
@@ -333,9 +332,9 @@
 					'</tr>' + '<tr>' +
 					gen_td("grad_university") + gen_td("grad_major") + gen_td("grad_degree") + gen_td("grad_gpa") +
 					'</tr>' + '<tr>' +
-					gen_td("toefl_ielts") + gen_td("gre") + gen_td("advisor") + gen_td("interests") +
+					gen_td("toefl_ielts") + gen_td("gre")  + gen_td("interests") +
 					'</tr>' + '<tr>' +
-					gen_td("decision") + gen_td("assistantship") + gen_td("fte") + gen_td("yearly_amount") +
+					gen_td("interact") + gen_td("decision") + gen_td("assistantship") + gen_td("advisor") +
 					'</tr>' + '<tr>' +
 					'<td></td><td> <button type="button" class="btn btn-primary btn-sm" id="btn_update' + app_id + '">Save</button></td>' +
 					'<td></td><td> <input type="file" class="btn_upload" id="btn_upload_' + app_id + '" accept=".pdf" > </td>' +
@@ -624,10 +623,9 @@
 							<th>TOEFL</th>
 							<th>GRE</th>
 							<th>Decision</th>
-							<th>Advisor</th>
 							<th>Support</th>
-							<th>FTE</th>
-							<th>Salary</th>
+							<th>Advisor</th>
+							<th>Interact</th>
 						</tr>
 					</thead>
 					<tfoot>
@@ -656,10 +654,9 @@
 							<th></th>
 							<th></th>
 							<th>Decision</th>
-							<th>Advisor</th>
 							<th>Support</th>
-							<th>FTE</th>
-							<th>Salary</th>
+							<th>Advisor</th>
+							<th>Interact</th>
 						</tr>
 					</tfoot>
 					<tbody>
