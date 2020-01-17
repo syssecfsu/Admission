@@ -480,7 +480,9 @@ pub fn import_csv(db_conn: &SqliteConnection, path: &str) -> io::Result<String> 
             if let DatabaseError(err_type, _) = err {
                 if let diesel::result::DatabaseErrorKind::UniqueViolation = err_type {
                     warn!("DatabaseError: application already exists, update TOEFL/GRE");
-                    Application::update_gretoefl(db_conn, id, gre, toefl);
+                    if !gre.starts_with("/") && !toefl.starts_with("/") {
+                        Application::update_gretoefl(db_conn, id, gre, toefl);
+                    }
                 }
             }
         }
