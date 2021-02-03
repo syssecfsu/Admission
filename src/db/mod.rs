@@ -116,6 +116,13 @@ impl Application {
             .is_ok()
     }
 
+    pub fn update_degree (conn: &SqliteConnection, id: i32, degree: String) -> bool {
+    	diesel::update(applications_tbl::table.filter(applications_tbl::applicant_id.eq(id)))
+    	.set(applications_tbl::degree.eq(degree))
+    	.execute(conn)
+    	.is_ok()
+    }
+
     // Santize the inputs
     pub fn santize(&mut self) {
         self.name = clean(&self.name);
@@ -363,7 +370,7 @@ pub fn import_csv(db_conn: &SqliteConnection, path: &str) -> io::Result<String> 
 
         let dep = read_field(&record, f2idx.get("Academic Department"));
 
-        if dep != "ASCOP" {
+        if (dep != "ASCOP") && (dep != "AS") {
             warn!("skip application to {}", dep);
             continue;
         }
@@ -414,9 +421,20 @@ pub fn import_csv(db_conn: &SqliteConnection, path: &str) -> io::Result<String> 
         let degree;
         let program;
 
+		/* Currently, there are following plans.
+		COPSCIENMS
+		COPSCIENMT
+		COPSCIENPD
+		COPSINETMS
+		COPSINETMT
+		COPSISECMS
+		COPSISECMT
+		DATASCCSMS
+		*/
         {
             let ndegree = &new_app.program;
-
+			let d;
+			
             if ndegree.starts_with("COPSCIEN") {
                 program = "CS";
             } else if ndegree.starts_with("COPSINET") {
@@ -425,19 +443,23 @@ pub fn import_csv(db_conn: &SqliteConnection, path: &str) -> io::Result<String> 
                 program = "SEC";
             } else if ndegree.starts_with("COPSICRM") {
                 program = "CRIM";
+            } else if ndegree.starts_with("DATASCCS") {
+				program = "DS"
             } else {
                 program = "UNK";
             }
 
             if ndegree.ends_with("PD") {
-                degree = "Ph.D";
+                d = "Ph.D";
             } else if ndegree.ends_with("MS") {
-                degree = "M.S";
+                d = "M.S";
             } else if ndegree.ends_with("MT") {
-                degree = "M.S/Th";
+                d = "M.S";
             } else {
-                degree = "UNK";
+                d = "UNK";
             }
+
+            degree = [d, program].join(" / ");
         }
 
         new_app.program = program.to_string();
@@ -468,7 +490,7 @@ pub fn import_csv(db_conn: &SqliteConnection, path: &str) -> io::Result<String> 
         let id = new_app.applicant_id;
         let gre = new_app.gre.clone();
         let toefl = new_app.toefl_ielts.clone();
-
+		
         let result = diesel::insert_into(applications_tbl::table)
             .values(&new_app)
             .execute(db_conn);
@@ -483,6 +505,8 @@ pub fn import_csv(db_conn: &SqliteConnection, path: &str) -> io::Result<String> 
                     if !gre.starts_with("/") && !toefl.starts_with("/") {
                         Application::update_gretoefl(db_conn, id, gre, toefl);
                     }
+
+                    Application::update_degree(db_conn, id, degree);
                 }
             }
         }
